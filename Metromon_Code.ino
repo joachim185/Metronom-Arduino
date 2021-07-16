@@ -2,7 +2,11 @@
 //Pieps: Pin 5
 //Taster IO: Pin 6
 //Taster Tap: Pin 7
+//Taster +: Pin 2
+//Taster -: Pin 8
 
+int plus=8;
+int minus=2;
 int LED_L=3;
 int LED_R=4;
 int Piep=5;
@@ -14,12 +18,15 @@ int IO=6;
 int go=0;
 int action=0;
 int tap=7;
+int bpmOld=0;
+int bpmPot=0;
 bool isTapping=true;
+bool dreh=true;
 double timeLos = 0;
 double timeStop = 0;
 double timeTap = 0;
-int bpmOld=0;
-bool dreh=true;
+
+
 
 
 void setup() {
@@ -29,6 +36,8 @@ void setup() {
   pinMode(Piep,OUTPUT);
   pinMode(IO, INPUT);
   pinMode(tap, INPUT);
+  pinMode(plus, INPUT);
+  pinMode(minus, INPUT);
   Serial.begin(9600);
 
 
@@ -36,9 +45,16 @@ void setup() {
 }
 
 void loop() {
-
-  bpm=analogRead(A0); //Werte einlesen
+  
   go=digitalRead(IO);
+  bpmPot=analogRead(A0); //Werte einlesen
+  bpmPot=map(bpmPot, 0, 1023, 50, 250); //Werte auf 50-250 mappen.
+
+ if(bpmPot!=bpmOld){
+  bpm=bpmPot;
+ }
+
+ bpmOld=bpmPot;
 
     
   if(go){
@@ -51,19 +67,26 @@ void loop() {
       delay(1000);
     }
   }
-  
-  bpm=map(bpm, 0, 1023, 50, 250); //Werte auf 50-250 mappen.
 
-  if(bpm!=bpmOld){
-    dreh=true;
+
+ if(!action){   //Wenn Taster Plus oder Minus gedrückt werden bpm verändern
+  if(digitalRead(plus)){
+    bpm++;
+    t=60000/bpm;
+    dreh=false;
+    delay(200);
+
+  }
+
+   if(digitalRead(minus)){
+    bpm--;
+    t=60000/bpm;
+    dreh=false;
+    delay(200);
   }
   
-  bpmOld=bpm;
-
-  if(dreh){         //Wenn man dreht
-     t=60000/bpm;  //Umrechnung bpm in ms.
-  }
- 
+ }
+  
 
 
   if(digitalRead(tap)&&!action){    //tap in
@@ -72,17 +95,19 @@ void loop() {
       timeStop=millis();
       timeTap=timeStop-timeLos;
       timeLos=millis();
-      delay(100);
+      delay(200);
       dreh=false;
+      bpm=60000/timeTap;
     }
 
-  t=timeTap;
-   
+     
   }
 
-Serial.println(60000/t);
-  if(action){
 
+Serial.println(bpm);
+
+  if(action){
+  t=60000/bpm;
   digitalWrite(LED_L,1);
   digitalWrite(Piep,1);
   delay(100);
